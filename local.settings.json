@@ -2,6 +2,9 @@
     "IsEncrypted": false,
     "Values": {
         "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated"
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+        "ClientId": "YOUR_CLIENT_ID",
+        "ClientSecret": "YOUR_CLIENT_SECRET",
+        "TenantId": "YOUR_TENANT_ID"
     }
 }
