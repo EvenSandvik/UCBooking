@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -22,9 +23,20 @@ public class BookRoomFunction
 
     [Function("BookRoom")]
     public async Task<HttpResponseData> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", "options")] HttpRequestData req,
+        FunctionContext executionContext)
     {
         _logger.LogInformation("BookRoom function processed a request.");
+
+        // Handle CORS preflight
+        if (req.Method == "OPTIONS")
+        {
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
+            response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            response.Headers.Add("Access-Control-Allow-Methods", "POST, OPTIONS");
+            return response;
+        }
 
         try
         {
@@ -41,8 +53,9 @@ public class BookRoomFunction
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Invalid request body");
-                var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid request body: " + ex.Message);
+                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
+                await errorResponse.WriteAsJsonAsync(new { error = "Invalid request body", message = ex.Message });
                 return errorResponse;
             }
 
@@ -50,36 +63,38 @@ public class BookRoomFunction
             if (string.IsNullOrEmpty(bookingRequest.RoomEmail))
             {
                 _logger.LogWarning("Room email is required");
-                return req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
+                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
+                await errorResponse.WriteAsJsonAsync(new { error = "Room email is required" });
+                return errorResponse;
             }
 
             // Create the event
             var createdEvent = await _graphService.CreateEventAsync(bookingRequest);
             
             // Return success response
-            var response = req.CreateResponse(System.Net.HttpStatusCode.Created);
-            await response.WriteAsJsonAsync(new
-            {
-                success = true,
-                eventId = createdEvent.Id,
-                webLink = createdEvent.WebLink,
-                message = "Meeting room booked successfully"
+            var response = req.CreateResponse(HttpStatusCode.Created);
+            response.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
+            await response.WriteAsJsonAsync(new { 
+                id = createdEvent.Id,
+                message = "Room booked successfully" 
             });
-
             return response;
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogError(ex, "Authentication failed");
-            var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.Unauthorized);
-            await errorResponse.WriteStringAsync("Authentication failed. Please check your Azure AD application permissions.");
+            _logger.LogError(ex, "Unauthorized access");
+            var errorResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+            errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
+            await errorResponse.WriteAsJsonAsync(new { error = "Unauthorized", message = "Authentication failed. Please sign in again." });
             return errorResponse;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing request");
-            var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync($"An error occurred: {ex.Message}");
+            _logger.LogError(ex, "Error booking room");
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
+            await errorResponse.WriteAsJsonAsync(new { error = "Internal Server Error", message = "An error occurred while processing your request." });
             return errorResponse;
         }
     }

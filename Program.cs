@@ -2,8 +2,11 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using UCBookingAPI.Services;
+using Microsoft.Azure.Functions.Worker.Extensions.Http;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication()
@@ -19,6 +22,17 @@ var host = new HostBuilder()
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
         services.AddScoped<IGraphService, GraphService>();
+        
+        // Configure CORS
+        services.AddCors(options =>
+        {
+            options.AddPolicy("AllowLocalhost", policy =>
+            {
+                policy.WithOrigins("http://localhost:3000", "http://localhost:5173")
+                      .AllowAnyHeader()
+                      .AllowAnyMethod();
+            });
+        });
     })
     .ConfigureLogging(logging =>
     {

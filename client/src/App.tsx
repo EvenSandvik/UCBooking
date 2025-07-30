@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import { Room, RoomLegend } from './components/Room';
+import { bookRoom } from './services/api';
+import { DEFAULT_TIME_SETTINGS } from './config';
 
 interface ResourceBooking {
   id: string;
@@ -147,36 +149,38 @@ function App() {
     const endTime = calculateEndTime(startTime, duration);
     
     try {
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const result = await bookRoom({
+        roomId: selectedResource.id.toString(),
+        userName: userName.trim(),
+        date,
+        startTime,
+        endTime,
+        subject: `Meeting with ${userName}`,
+        content: 'Scheduled meeting',
+      });
+
+      if (result.success) {
+        const newBooking = {
+          id: result.id,
           resourceType: selectedResource.type,
           resourceId: selectedResource.id,
           userName: userName.trim(),
           date,
           startTime,
           endTime,
-          duration,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Booking failed');
-
-      const newBooking = await response.json();
-      setBookings([...bookings, newBooking]);
-      setSelectedResource(null);
-      setShowBookingModal(false);
-      setUserName('');
-      showMessage(
-        `Successfully booked ${selectedResource.type} ${selectedResource.id}!`,
-        'success'
-      );
+        };
+        
+        setBookings([...bookings, newBooking]);
+        setSelectedResource(null);
+        setShowBookingModal(false);
+        setUserName('');
+        showMessage(result.message || 'Room booked successfully!', 'success');
+      } else {
+        throw new Error(result.message || 'Booking failed');
+      }
     } catch (error) {
       console.error('Error creating booking:', error);
-      showMessage('Failed to create booking', 'error');
+      showMessage(error instanceof Error ? error.message : 'Failed to create booking', 'error');
     }
   };
 
