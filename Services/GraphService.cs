@@ -7,15 +7,20 @@ using Microsoft.Graph.Models;
 using UCBookingAPI.Models;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
+using Azure.Identity;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace UCBookingAPI.Services;
 
 public class GraphService : IGraphService
 {
     private readonly ILogger<GraphService> _logger;
-    private readonly string[] _scopes = new[] { "Calendars.ReadWrite", "User.Read" };
-    private readonly string _clientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e"; // Microsoft Graph Explorer client ID (safe for local dev)
+    private readonly string[] _scopes = new[] { "Calendars.ReadWrite", "User.Read", "offline_access" };
+    private const string ClientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e"; // Microsoft Graph Explorer client ID (safe for local dev)
+    private const string TokenCachePath = "token_cache.bin";
     private GraphServiceClient _graphClient;
+    private static readonly object TokenCacheLock = new object();
 
     public GraphService(IConfiguration configuration, ILogger<GraphService> logger)
     {
@@ -25,20 +30,22 @@ public class GraphService : IGraphService
 
     private async Task<GraphServiceClient> GetAuthenticatedClientAsync()
     {
-        var options = new DeviceCodeCredentialOptions
+        var options = new InteractiveBrowserCredentialOptions
         {
-            ClientId = _clientId,
-            DeviceCodeCallback = (code, cancellation) =>
+            ClientId = ClientId,
+            TenantId = "common",
+            AuthorityHost = AzureAuthorityHosts.AzurePublicCloud,
+            TokenCachePersistenceOptions = new TokenCachePersistenceOptions
             {
-                Console.WriteLine(code.Message);
-                return Task.CompletedTask;
+                Name = "UCBookingTokenCache",
+                UnsafeAllowUnencryptedStorage = true
             },
-            AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
+            RedirectUri = new Uri("http://localhost"),
         };
 
-        var deviceCodeCredential = new DeviceCodeCredential(options);
+        var credential = new InteractiveBrowserCredential(options);
         
-        var graphClient = new GraphServiceClient(deviceCodeCredential, _scopes);
+        var graphClient = new GraphServiceClient(credential, _scopes);
         
         // Test the connection
         try 
