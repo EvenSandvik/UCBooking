@@ -6,5 +6,9 @@
         "ClientId": "YOUR_CLIENT_ID",
         "ClientSecret": "YOUR_CLIENT_SECRET",
         "TenantId": "YOUR_TENANT_ID"
+    },
+    "Host": {
+        "CORS": "http://localhost:5173,http://localhost:3000",
+        "CORSCredentials": true
     }
 }
