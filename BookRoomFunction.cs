@@ -1,3 +1,4 @@
+using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -28,11 +29,21 @@ public class BookRoomFunction
         try
         {
             // Parse the request body
-            var bookingRequest = await req.ReadFromJsonAsync<BookingRequest>();
-            if (bookingRequest == null)
+            BookingRequest bookingRequest;
+            try
             {
-                _logger.LogWarning("Invalid request body");
-                return req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
+                var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
+                bookingRequest = System.Text.Json.JsonSerializer.Deserialize<BookingRequest>(requestBody, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                }) ?? throw new InvalidOperationException("Failed to deserialize request body");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Invalid request body");
+                var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
+                await errorResponse.WriteStringAsync("Invalid request body: " + ex.Message);
+                return errorResponse;
             }
 
             // Validate required fields

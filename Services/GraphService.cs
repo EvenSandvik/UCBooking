@@ -5,48 +5,61 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using UCBookingAPI.Models;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace UCBookingAPI.Services;
 
 public class GraphService : IGraphService
 {
     private readonly ILogger<GraphService> _logger;
-    private readonly string _clientId;
-    private readonly string _clientSecret;
-    private readonly string _tenantId;
-    private readonly string[] _scopes = new[] { "https://graph.microsoft.com/.default" };
+    private readonly string[] _scopes = new[] { "Calendars.ReadWrite", "User.Read" };
+    private readonly string _clientId = "14d82eec-204b-4c2f-b7e8-296a70dab67e"; // Microsoft Graph Explorer client ID (safe for local dev)
+    private GraphServiceClient _graphClient;
 
     public GraphService(IConfiguration configuration, ILogger<GraphService> logger)
     {
         _logger = logger;
-        _clientId = configuration["ClientId"] ?? throw new ArgumentNullException("ClientId is not configured");
-        _clientSecret = configuration["ClientSecret"] ?? throw new ArgumentNullException("ClientSecret is not configured");
-        _tenantId = configuration["TenantId"] ?? throw new ArgumentNullException("TenantId is not configured");
+        _graphClient = GetAuthenticatedClientAsync().GetAwaiter().GetResult();
     }
 
-    private GraphServiceClient GetAuthenticatedClient()
+    private async Task<GraphServiceClient> GetAuthenticatedClientAsync()
     {
-        var options = new TokenCredentialOptions
+        var options = new DeviceCodeCredentialOptions
         {
+            ClientId = _clientId,
+            DeviceCodeCallback = (code, cancellation) =>
+            {
+                Console.WriteLine(code.Message);
+                return Task.CompletedTask;
+            },
             AuthorityHost = AzureAuthorityHosts.AzurePublicCloud
         };
 
-        var clientSecretCredential = new ClientSecretCredential(
-            _tenantId, 
-            _clientId, 
-            _clientSecret, 
-            options);
-
-        return new GraphServiceClient(clientSecretCredential, _scopes);
+        var deviceCodeCredential = new DeviceCodeCredential(options);
+        
+        var graphClient = new GraphServiceClient(deviceCodeCredential, _scopes);
+        
+        // Test the connection
+        try 
+        {
+            await graphClient.Me.GetAsync();
+            _logger.LogInformation("Successfully authenticated with Microsoft Graph");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to authenticate with Microsoft Graph");
+            throw;
+        }
+        
+        return graphClient;
     }
 
     public async Task<Event> CreateEventAsync(BookingRequest request)
     {
         try
         {
-            var graphClient = GetAuthenticatedClient();
-
-            var @event = new Event
+var @event = new Event
             {
                 Subject = request.Subject,
                 Body = new ItemBody
@@ -91,7 +104,7 @@ public class GraphService : IGraphService
             };
 
             // Create the event in the room's calendar
-            var createdEvent = await graphClient.Users[request.RoomEmail].Events
+            var createdEvent = await _graphClient.Users[request.RoomEmail].Calendar.Events
                 .PostAsync(@event);
 
             _logger.LogInformation("Successfully created event {EventId} in room {RoomEmail}",
