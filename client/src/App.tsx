@@ -124,6 +124,14 @@ function App() {
       return;
     }
     
+    // Set default time slot to Full Day for desks
+    if (type === 'desk') {
+      setStartTime('09:00-17:00');
+    } else {
+      // Reset to default for rooms
+      setStartTime('09:00');
+    }
+    
     setSelectedResource({ type, id: resourceId });
     setShowBookingModal(true);
   };
@@ -149,17 +157,25 @@ function App() {
     e.preventDefault();
     if (!selectedResource || !userName.trim()) return;
 
-    const endTime = calculateEndTime(startTime, duration);
+    let bookingStartTime = startTime;
+    let bookingEndTime = calculateEndTime(startTime, duration);
     
+    // For desk bookings with time range (e.g., "09:00-17:00")
+    if (selectedResource.type === 'desk' && typeof startTime === 'string' && startTime.includes('-')) {
+      const [start, end] = startTime.split('-');
+      bookingStartTime = start;
+      bookingEndTime = end;
+    }
+
     try {
       const result = await bookRoom({
         roomId: selectedResource.id.toString(),
         userName: userName.trim(),
         date,
-        startTime,
-        endTime,
-        subject: `Meeting with ${userName}`,
-        content: 'Scheduled meeting',
+        startTime: bookingStartTime,
+        endTime: bookingEndTime,
+        subject: `Desk booking for ${userName}`,  // More specific subject for desk bookings
+        content: 'Scheduled desk booking',
       });
 
       if (result.success) {
