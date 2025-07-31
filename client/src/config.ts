@@ -8,10 +8,29 @@ export const API_ENDPOINTS = {
 
 // Room email mapping
 export const ROOM_EMAILS: Record<string, string> = {
-  ulriken: 'ulriken@uc.no', // Replace with actual room emails
-  rundemannen: 'rundemannen@uc.no',
-  loddefjord: 'loddefjord@uc.no',
-  fana: 'fana@uc.no',
+  // Desks
+  'kontorplass 1': 'kontorplass 1',
+  'kontorplass 2': 'kontorplass 2',
+  'kontorplass 3': 'kontorplass 3',
+  'kontorplass 4': 'kontorplass 4',
+  'kontorplass 5': 'kontorplass 5',
+  'kontorplass 6': 'kontorplass 6',
+  'kontorplass 7': 'kontorplass 7',
+  'kontorplass 8': 'kontorplass 8',
+  'kontorplass 9': 'kontorplass 9',
+  'kontorplass 10': 'kontorplass 10',
+  'kontorplass 11': 'kontorplass 11',
+  'kontorplass 12': 'kontorplass 12',
+  'kontorplass 13': 'kontorplass 13',
+  'kontorplass 14': 'kontorplass 14',
+  'kontorplass 15': 'kontorplass 15',
+  'kontorplass 16': 'kontorplass 16',
+  
+  // Meeting rooms 
+  ulriken: 'Møterom - Ulriken',
+  rundemannen: 'Møterom - Rundemannen',
+  loddefjord: 'Stillerom - Loddefjord',
+  fana: 'Stillerom - Fana',
 };
 
 // Default time settings

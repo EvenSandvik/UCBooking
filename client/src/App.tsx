@@ -107,21 +107,24 @@ function App() {
   };
 
   const handleResourceClick = (type: 'desk' | 'room', id: number | string) => {
+    const resourceId = type === 'desk' ? `kontorplass ${id}` : id;
+    const displayId = type === 'desk' ? id : id;
+    
     const existingBooking = bookings.find(b => 
       b.resourceType === type && 
-      b.resourceId === id && 
+      b.resourceId === resourceId && 
       b.date === date
     );
     
     if (existingBooking) {
       showMessage(
-        `${type === 'desk' ? 'Desk' : 'Room'} ${id} is booked by ${existingBooking.userName}`, 
+        `${type === 'desk' ? 'Desk' : 'Room'} ${displayId} is booked by ${existingBooking.userName}`, 
         'error'
       );
       return;
     }
     
-    setSelectedResource({ type, id });
+    setSelectedResource({ type, id: resourceId });
     setShowBookingModal(true);
   };
 
@@ -345,8 +348,9 @@ function App() {
             { number: 15, top: '38%', left: '10%' },
             { number: 16, top: '38%', left: '25%' },
           ].map(({ number, top, left }) => {
+            const deskId = `kontorplass ${number}`;
             const isBooked = isDeskBooked(number);
-            const booking = bookings.find(b => b.deskNumber === number);
+            const booking = bookings.find(b => b.resourceType === 'desk' && b.resourceId === deskId);
             
             return (
               <div
