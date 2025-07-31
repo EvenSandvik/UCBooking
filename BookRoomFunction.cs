@@ -80,21 +80,21 @@ public class BookRoomFunction
             // Create the event
             var createdEvent = await _graphService.CreateEventAsync(bookingRequest);
             
-            // Return success response
-            var response = req.CreateResponse(HttpStatusCode.Created);
-            response.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
-            response.Headers.Add("Access-Control-Allow-Credentials", "true");
-            
             // Create response object
-            var responseObj = new { 
+            var responseObj = new 
+            { 
                 id = createdEvent.Id,
                 message = "Room booked successfully" 
             };
             
-            // Manually serialize to avoid duplicate Content-Type headers
-            var json = System.Text.Json.JsonSerializer.Serialize(responseObj);
-            response.Headers.Add("Content-Type", "application/json; charset=utf-8");
-            await response.WriteStringAsync(json);
+            // Create response with proper headers
+            var response = req.CreateResponse(HttpStatusCode.Created);
+            response.Headers.Add("Access-Control-Allow-Origin", "http://localhost:3000, http://localhost:5173");
+            response.Headers.Add("Access-Control-Allow-Credentials", "true");
+            response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+            
+            // Set content type and write response
+            await response.WriteAsJsonAsync(responseObj);
             return response;
         }
         catch (UnauthorizedAccessException ex)
