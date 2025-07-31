@@ -61,7 +61,7 @@ const MEETING_ROOMS: Room[] = [
 
 function App() {
   const [selectedResource, setSelectedResource] = useState<{type: 'desk' | 'room', id: number | string} | null>(null);
-  const [userName, setUserName] = useState('');
+  const [bookingName, setBookingName] = useState('');
   const [bookings, setBookings] = useState<ResourceBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -155,7 +155,7 @@ function App() {
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedResource || !userName.trim()) return;
+    if (!selectedResource || !bookingName.trim()) return;
 
     let bookingStartTime = startTime;
     let bookingEndTime = calculateEndTime(startTime, duration);
@@ -170,11 +170,11 @@ function App() {
     try {
       const result = await bookRoom({
         roomId: selectedResource.id.toString(),
-        userName: userName.trim(),
+        userName: bookingName.trim(),
         date,
         startTime: bookingStartTime,
         endTime: bookingEndTime,
-        subject: `Desk booking for ${userName}`,  // More specific subject for desk bookings
+        subject: `${bookingName}`,  // More specific subject for desk bookings
         content: 'Scheduled desk booking',
       });
 
@@ -183,7 +183,7 @@ function App() {
           id: result.id,
           resourceType: selectedResource.type,
           resourceId: selectedResource.id,
-          userName: userName.trim(),
+          userName: bookingName.trim(),
           date,
           startTime,
           endTime,
@@ -192,7 +192,7 @@ function App() {
         setBookings([...bookings, newBooking]);
         setSelectedResource(null);
         setShowBookingModal(false);
-        setUserName('');
+        setBookingName('');
         showMessage(result.message || 'Room booked successfully!', 'success');
       } else {
         throw new Error(result.message || 'Booking failed');
@@ -404,14 +404,14 @@ function App() {
             <h2>Book {selectedResource.type === 'desk' ? 'Desk' : 'Meeting Room'} {selectedResource.id}</h2>
             <form onSubmit={handleBooking}>
               <div className="form-group">
-                <label htmlFor="userName">Your Name</label>
+                <label htmlFor="userName">Booking name</label>
                 <input
                   type="text"
                   id="userName"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
+                  value={bookingName}
+                  onChange={(e) => setBookingName(e.target.value)}
                   required
-                  placeholder="Enter your full name"
+                  placeholder="Enter booking description"
                   autoFocus
                 />
               </div>
