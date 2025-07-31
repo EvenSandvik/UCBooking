@@ -8,10 +8,10 @@ export const API_ENDPOINTS = {
 
 // Room email mapping
 export const ROOM_EMAILS: Record<string, string> = {
-  ulriken: 'ulriken@yourdomain.com', // Replace with actual room emails
-  rundemannen: 'rundemannen@yourdomain.com',
-  loddefjord: 'loddefjord@yourdomain.com',
-  fana: 'fana@yourdomain.com',
+  ulriken: 'ulriken@uc.no', // Replace with actual room emails
+  rundemannen: 'rundemannen@uc.no',
+  loddefjord: 'loddefjord@uc.no',
+  fana: 'fana@uc.no',
 };
 
 // Default time settings

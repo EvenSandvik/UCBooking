@@ -55,7 +55,11 @@ public class BookRoomFunction
                 _logger.LogWarning(ex, "Invalid request body");
                 var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
                 errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
-                await errorResponse.WriteAsJsonAsync(new { error = "Invalid request body", message = ex.Message });
+                errorResponse.Headers.Add("Access-Control-Allow-Credentials", "true");
+                var errorObj = new { error = "Invalid request body", message = ex.Message };
+                var errorJson = System.Text.Json.JsonSerializer.Serialize(errorObj);
+                errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+                await errorResponse.WriteStringAsync(errorJson);
                 return errorResponse;
             }
 
@@ -65,7 +69,11 @@ public class BookRoomFunction
                 _logger.LogWarning("Room email is required");
                 var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
                 errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
-                await errorResponse.WriteAsJsonAsync(new { error = "Room email is required" });
+                errorResponse.Headers.Add("Access-Control-Allow-Credentials", "true");
+                var errorObj = new { error = "Room email is required" };
+                var errorJson = System.Text.Json.JsonSerializer.Serialize(errorObj);
+                errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+                await errorResponse.WriteStringAsync(errorJson);
                 return errorResponse;
             }
 
@@ -75,10 +83,18 @@ public class BookRoomFunction
             // Return success response
             var response = req.CreateResponse(HttpStatusCode.Created);
             response.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
-            await response.WriteAsJsonAsync(new { 
+            response.Headers.Add("Access-Control-Allow-Credentials", "true");
+            
+            // Create response object
+            var responseObj = new { 
                 id = createdEvent.Id,
                 message = "Room booked successfully" 
-            });
+            };
+            
+            // Manually serialize to avoid duplicate Content-Type headers
+            var json = System.Text.Json.JsonSerializer.Serialize(responseObj);
+            response.Headers.Add("Content-Type", "application/json; charset=utf-8");
+            await response.WriteStringAsync(json);
             return response;
         }
         catch (UnauthorizedAccessException ex)
@@ -86,15 +102,23 @@ public class BookRoomFunction
             _logger.LogError(ex, "Unauthorized access");
             var errorResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
             errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
-            await errorResponse.WriteAsJsonAsync(new { error = "Unauthorized", message = "Authentication failed. Please sign in again." });
+            errorResponse.Headers.Add("Access-Control-Allow-Credentials", "true");
+            var errorObj = new { error = "Unauthorized", message = "Authentication failed. Please sign in again." };
+            var errorJson = System.Text.Json.JsonSerializer.Serialize(errorObj);
+            errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+            await errorResponse.WriteStringAsync(errorJson);
             return errorResponse;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error booking room");
+            _logger.LogError(ex, "Error booking room: {Message}", ex.Message);
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             errorResponse.Headers.Add("Access-Control-Allow-Origin", new[] { "http://localhost:3000", "http://localhost:5173" });
-            await errorResponse.WriteAsJsonAsync(new { error = "Internal Server Error", message = "An error occurred while processing your request." });
+            errorResponse.Headers.Add("Access-Control-Allow-Credentials", "true");
+            var errorObj = new { error = "Internal Server Error", message = ex.Message };
+            var errorJson = System.Text.Json.JsonSerializer.Serialize(errorObj);
+            errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+            await errorResponse.WriteStringAsync(errorJson);
             return errorResponse;
         }
     }
