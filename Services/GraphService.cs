@@ -119,4 +119,74 @@ public class GraphService : IGraphService
             throw;
         }
     }
+    
+    // Function that checks room availability using the getSchedule endpoint
+    public async Task<List<string>> GetAvailableRoomsAsync()
+    {
+        var availableRooms = new List<string>();
+        
+        try
+        {
+            // Get all rooms in the organization
+            var rooms = await _graphClient.Places["microsoft.graph.room"].GetAsync();
+            
+            if (rooms?.Value == null || !rooms.Value.Any())
+            {
+                _logger.LogWarning("No rooms found in the organization");
+                return availableRooms;
+            }
+            
+            var roomEmails = rooms.Value.Where(r => !string.IsNullOrEmpty(r.EmailAddress))
+                                     .Select(r => r.EmailAddress)
+                                     .ToList();
+            
+            if (!roomEmails.Any())
+            {
+                _logger.LogWarning("No rooms with valid email addresses found");
+                return availableRooms;
+            }
+            
+            // Prepare the request body for getSchedule
+            var requestBody = new Microsoft.Graph.Users.Item.Calendar.GetSchedule.GetSchedulePostRequestBody
+            {
+                Schedules = roomEmails,
+                StartTime = new DateTimeTimeZone
+                {
+                    DateTime = DateTime.UtcNow.ToString("o"),
+                    TimeZone = "UTC"
+                },
+                EndTime = new DateTimeTimeZone
+                {
+                    DateTime = DateTime.UtcNow.AddHours(1).ToString("o"),
+                    TimeZone = "UTC"
+                },
+                AvailabilityViewInterval = 60 // 60 minutes
+            };
+            
+            // Get the schedule for all rooms
+            var schedule = await _graphClient.Me.Calendar.GetSchedule(requestBody).PostAsync();
+            
+            // Find available rooms (no scheduled events)
+            foreach (var scheduleInfo in schedule)
+            {
+                if (scheduleInfo.ScheduleItems == null || !scheduleInfo.ScheduleItems.Any())
+                {
+                    var roomName = rooms.Value.FirstOrDefault(r => r.EmailAddress == scheduleInfo.ScheduleId)?.DisplayName;
+                    if (!string.IsNullOrEmpty(roomName))
+                    {
+                        availableRooms.Add(roomName);
+                    }
+                }
+            }
+            
+            _logger.LogInformation($"Found {availableRooms.Count} available rooms");
+        }
+        catch (ServiceException ex)
+        {
+            _logger.LogError(ex, "Error getting room availability from Microsoft Graph");
+            throw;
+        }
+        
+        return availableRooms;
+    }
 }
