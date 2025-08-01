@@ -7,4 +7,5 @@ namespace UCBookingAPI.Services;
 public interface IGraphService
 {
     Task<Event> CreateEventAsync(BookingRequest request);
+    public Task<List<string>> GetAvailableRooms();
 }

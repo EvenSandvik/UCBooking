@@ -122,4 +122,13 @@ public class BookRoomFunction
             return errorResponse;
         }
     }
+    
+    [Function("GetAvailableRooms")]
+    public async Task<HttpResponseData> GetAvailableRooms([HttpTrigger(AuthorizationLevel.Function, "get", Route = "rooms")] HttpRequestData req)
+    {
+        var availableRooms = await _graphService.GetAvailableRooms();
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        await response.WriteAsJsonAsync(availableRooms);
+        return response;
+    }
 }

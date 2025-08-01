@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Graph.Me.FindMeetingTimes;
 
 namespace UCBookingAPI.Services;
 
@@ -120,61 +121,74 @@ public class GraphService : IGraphService
         }
     }
     
-    // Function that checks room availability using the getSchedule endpoint
-    public async Task<List<string>> GetAvailableRoomsAsync()
+    // Function that checks room availability using the FindMeetingTimes endpoint
+    public async Task<List<string>> GetAvailableRooms()
     {
         var availableRooms = new List<string>();
         
         try
         {
-            // Get all rooms in the organization
-            var rooms = await _graphClient.Places["microsoft.graph.room"].GetAsync();
-            
-            if (rooms?.Value == null || !rooms.Value.Any())
-            {
-                _logger.LogWarning("No rooms found in the organization");
-                return availableRooms;
-            }
-            
-            var roomEmails = rooms.Value.Where(r => !string.IsNullOrEmpty(r.EmailAddress))
-                                     .Select(r => r.EmailAddress)
-                                     .ToList();
-            
-            if (!roomEmails.Any())
-            {
-                _logger.LogWarning("No rooms with valid email addresses found");
-                return availableRooms;
-            }
-            
-            // Prepare the request body for getSchedule
-            var requestBody = new Microsoft.Graph.Users.Item.Calendar.GetSchedule.GetSchedulePostRequestBody
-            {
-                Schedules = roomEmails,
-                StartTime = new DateTimeTimeZone
+            // Get the user's time zone
+            var user = await _graphClient.Me
+                .GetAsync(requestConfiguration => 
                 {
-                    DateTime = DateTime.UtcNow.ToString("o"),
-                    TimeZone = "UTC"
+                    requestConfiguration.QueryParameters.Select = new[] { "mailboxSettings" };
+                });
+                
+            var timeZone = user.MailboxSettings?.TimeZone ?? "UTC";
+            var now = DateTime.UtcNow;
+            
+            // Create a meeting time suggestion
+            var requestBody = new FindMeetingTimesPostRequestBody
+            {
+                Attendees = new List<AttendeeBase>(),
+                LocationConstraint = new LocationConstraint
+                {
+                    IsRequired = false,
+                    SuggestLocation = false
                 },
-                EndTime = new DateTimeTimeZone
+                TimeConstraint = new TimeConstraint
                 {
-                    DateTime = DateTime.UtcNow.AddHours(1).ToString("o"),
-                    TimeZone = "UTC"
-                },
-                AvailabilityViewInterval = 60 // 60 minutes
-            };
-            
-            // Get the schedule for all rooms
-            var schedule = await _graphClient.Me.Calendar.GetSchedule(requestBody).PostAsync();
-            
-            // Find available rooms (no scheduled events)
-            foreach (var scheduleInfo in schedule)
-            {
-                if (scheduleInfo.ScheduleItems == null || !scheduleInfo.ScheduleItems.Any())
-                {
-                    var roomName = rooms.Value.FirstOrDefault(r => r.EmailAddress == scheduleInfo.ScheduleId)?.DisplayName;
-                    if (!string.IsNullOrEmpty(roomName))
+                    TimeSlots = new List<TimeSlot>
                     {
-                        availableRooms.Add(roomName);
+                        new TimeSlot
+                        {
+                            Start = new DateTimeTimeZone
+                            {
+                                DateTime = now.ToString("o"),
+                                TimeZone = timeZone
+                            },
+                            End = new DateTimeTimeZone
+                            {
+                                DateTime = now.AddHours(1).ToString("o"),
+                                TimeZone = timeZone
+                            }
+                        }
+                    }
+                },
+                MaxCandidates = 20
+            };
+
+            var meetingTimeSuggestions = await _graphClient.Me
+                .FindMeetingTimes
+                .PostAsync(requestBody);
+
+            // Extract available rooms from the suggestions
+            if (meetingTimeSuggestions?.MeetingTimeSuggestions != null)
+            {
+                foreach (var timeSlot in meetingTimeSuggestions.MeetingTimeSuggestions)
+                {
+                    if (timeSlot.Locations != null)
+                    {
+                        foreach (var location in timeSlot.Locations)
+                        {
+                            if (location.LocationType == LocationType.ConferenceRoom && 
+                                !string.IsNullOrEmpty(location.DisplayName) &&
+                                !availableRooms.Contains(location.DisplayName))
+                            {
+                                availableRooms.Add(location.DisplayName);
+                            }
+                        }
                     }
                 }
             }
@@ -184,6 +198,11 @@ public class GraphService : IGraphService
         catch (ServiceException ex)
         {
             _logger.LogError(ex, "Error getting room availability from Microsoft Graph");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while getting room availability");
             throw;
         }
         

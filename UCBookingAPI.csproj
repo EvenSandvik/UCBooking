@@ -15,7 +15,5 @@
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.0.1" />
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.2" />
         <PackageReference Include="Microsoft.Graph" Version="5.87.0" />
-        <PackageReference Include="Microsoft.Graph.Auth" Version="1.0.0-preview.7" />
-        <PackageReference Include="Microsoft.Graph.Core" Version="3.2.4" />
     </ItemGroup>
 </Project>
