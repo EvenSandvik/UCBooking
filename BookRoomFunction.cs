@@ -1,10 +1,7 @@
-using System.IO;
 using System.Net;
-using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.Graph.Models;
 using UCBookingAPI.Models;
 using UCBookingAPI.Services;
 
@@ -28,7 +25,7 @@ public class BookRoomFunction
     {
         _logger.LogInformation("BookRoom function processed a request.");
 
-        // Handle CORS preflight
+        // Handles CORS preflight
         if (req.Method == "OPTIONS")
         {
             var response = req.CreateResponse(HttpStatusCode.OK);
